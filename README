@@ -1,0 +1,2 @@
+Download the files to a linux system. Once on the linux system run "make" to compile readmeminfo.c. To test the program run
+"./readmeminfo" and it should display the memory information for the system.
