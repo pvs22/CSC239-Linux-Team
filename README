@@ -1,4 +1,10 @@
-Download the files to a linux system. Once on the linux system run "make" to compile readmeminfo.c. To test the program run
-"./readmeminfo" and it should display the memory information for the system.
+Download the files to a linux system. On the Linux system run "make" to compile readmeminfo.c. To test the program run
+"./readmeminfo" to display the memory information in the following format:
+--- Memory Stats ---
+Free Memory = 252464 KB
+Used Memory = 762336 KB
+Total Memory = 1014800 KB
+Memory Utilization = 75.12%
 
-To download the source code go to http://github.com/bjwbell/CSC239-Linux-Team/archives/master 
+
+The source code is at http://github.com/bjwbell/CSC239-Linux-Team/archives/master 
