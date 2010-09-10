@@ -1,2 +1,2 @@
 default:
-	gcc -o readmeminfo readmeminfo.c
+	gcc -o readperfstats readperfstats.c
