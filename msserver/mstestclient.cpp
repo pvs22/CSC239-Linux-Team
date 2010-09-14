@@ -6,18 +6,20 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../readperfstats/readperfstats.h"
 
 using namespace std;
+void printmemstats (char* buffer);
 
-int main(int argc, char *argv[])
+int main (int argc, char *argv[])
 {
 	int 	sfd		= 0;
 	hostent	*server = NULL;
 	sockaddr_in	serv_addr;
 
-	if( argc < 4 )
+	if( argc < 2 )
 	{
-		cout << "Usage: " << argv[0] << " server portnum message" << endl;
+		cout << "Usage: " << argv[0] << " server portnum" << endl;
 		return 0;
 	}
 
@@ -47,8 +49,10 @@ int main(int argc, char *argv[])
 		cerr << "Error connecting to server" << endl;
 		return 1;
 	}
-
-	int status = write(sfd, argv[3], strlen(argv[3]));
+	
+	char msg[2048];
+	printmemstats(msg);
+	int status = write(sfd, msg, strlen(msg));
 	if( status == -1 )
 	{
 		cerr << "Error writing to server" << endl;
@@ -56,4 +60,15 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
+}
+
+void printmemstats (char* buffer){
+  mem_info meminfo;
+  if (readmeminfo(&meminfo) != 0){
+    printf("Could not read memory information\n");
+    return;
+  }
+  
+  sprintf (buffer, "--- Memory Stats ---\nFree Memory = %d KB\nUsed Memory = %d KB\nTotal Memory = %d KB\nMemory Utilization = %5.2f%%\nNumber of pages paged in = %d\nNumber of pages paged out = %d\nNumber of pages swaped in = %d\nNumber of pages swaped out = %d\n", 
+	   meminfo.free, meminfo.used, meminfo.total, meminfo.util, meminfo.pgin, meminfo.pgout, meminfo.swpin, meminfo.swpout);
 }

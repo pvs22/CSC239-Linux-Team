@@ -2,48 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-// structure to hold memory (RAM) information.
-typedef struct {
-    int free;
-    int used;
-    int total;
-    float util;
-    int pgin;
-    int pgout;
-    int swpin;
-    int swpout;
-} mem_info;
-
-// structure to hold network information.
-typedef struct 
-{
-  char networkName[256];
-  int bytesRec;
-  int bytesSent;
-  int errs;
-  int colls;
-} ns;
-
-
-
-void readmeminfo();
-void readcpuinfo();
-void readdiskioinfo();
-
-
-void readnetworkinfo();
-void readprocessinfo();
-
-
-
-int main()
-{
-  readmeminfo();
-  //readcpuinfo();
-  //readdiskioinfo();
-  readnetworkinfo();
-  //readprocessinfo();
-}
+#include "readperfstats.h"
 
 int readvmstats(mem_info* minfo)
 {
@@ -65,13 +24,6 @@ int readvmstats(mem_info* minfo)
                     fclose(f);
                     return 1;
                 }
-                else 
-                {   printf("----- VM stats ------\n");
-                    printf("Number of pages paged in = %d\n", minfo->pgin);
-                    printf("Number of pages paged out = %d\n", minfo->pgout);
-                    printf("Number of pages swaped in = %d\n", minfo->swpin);
-                    printf("Number of pages swaped out = %d\n", minfo->swpout);					
-                }
             }
         }
     }
@@ -86,37 +38,27 @@ int readvmstats(mem_info* minfo)
 
 
 
-void readmeminfo()
+int readmeminfo(mem_info* meminfo)
 {
         FILE* f;
-	mem_info meminfo;
-        int memTotal, memUsed, memFree;
-        float util;
 
-        if (f = fopen("/proc/meminfo", "r"))
-        {
-	  if (fscanf(f, "MemTotal: %d kB MemFree: %d kb", &meminfo.total, &meminfo.free) == 0) {
+        if (f = fopen("/proc/meminfo", "r")) {
+	  if (fscanf(f, "MemTotal: %d kB MemFree: %d kb", &(meminfo->total), &(meminfo->free)) == 0) {
 	    fclose(f);
 	    fprintf(stderr, "Error : Can not read MemTotal and MemFree from /proc/meminfo\n");
+	    return -1;
 	  } else {  
-	  
-	    meminfo.used = memTotal - memFree;
-	    meminfo.util = (float) memUsed/(1.0*memTotal)*100;
 	    
-	    printf ("--- Memory Stats ---\n");
-	    printf ("Free Memory = %d KB\n", meminfo.free);
-	    printf ("Used Memory = %d KB\n", meminfo.used);
-	    printf ("Total Memory = %d KB\n", meminfo.total);
-	    printf ("Memory Utilization = %5.2f%%\n", meminfo.util);
+	    meminfo->used = meminfo->total - meminfo->free;
+	    meminfo->util = (float) meminfo->used/(1.0*meminfo->total)*100;	    
 	    fclose(f);
-	  }
-        }
-        else
-        {
+	    }
+	} else {
 	  fprintf(stderr, "Error : Can not open /proc/meminfo");
-        }
-	readvmstats(&meminfo);
-
+	  return -1;
+	}
+	readvmstats(meminfo);
+	return 0;
 }
 
 
@@ -175,7 +117,6 @@ void readnetworkinfo()
 	int total_bytesent = 0;
 	int total_errs = 0;
 	int i = 0;
-	char new[25];
 	int buffer_size = 1024;
 	char buffer[buffer_size];
 	int fscanf_value;

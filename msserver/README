@@ -2,4 +2,4 @@ There is a msserver.cpp which would create a server and listen for web server.  
 mstestclient.cpp is just a test file to test out the server.
 
 Usage: server 3000
-Usage: client localhost 3000 "This message will be sent to the server"
+Usage: testclient localhost 3000

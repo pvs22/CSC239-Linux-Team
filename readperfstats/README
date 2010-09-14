@@ -1,5 +1,5 @@
-Download the files to a linux system. On the Linux system run "make" to compile readperfstats.c. To test the program run
-"./readperfstats" to display the system information in the following format:
+Download the files to a linux system. On the Linux system run "make" to compile main.c. To test the program run
+"./main" to display the system information in the following format:
 --- Memory Stats ---
 Free Memory = 252464 KB
 Used Memory = 762336 KB
