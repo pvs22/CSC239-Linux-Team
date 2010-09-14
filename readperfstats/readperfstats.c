@@ -1,11 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-void readmeminfo();
-void readcpuinfo();
-void readdiskioinfo();
-
+#include <string.h>
+// structure to hold memory (RAM) information.
+typedef struct {
+    int free;
+    int used;
+    int total;
+    float util;
+    int pgin;
+    int pgout;
+    int swpin;
+    int swpout;
+} mem_info;
 
 // structure to hold network information.
 typedef struct 
@@ -16,6 +23,13 @@ typedef struct
   int errs;
   int colls;
 } ns;
+
+
+
+void readmeminfo();
+void readcpuinfo();
+void readdiskioinfo();
+
 
 void readnetworkinfo();
 void readprocessinfo();
@@ -31,27 +45,69 @@ int main()
   //readprocessinfo();
 }
 
+int readvmstats(mem_info* minfo)
+{
+    FILE *f;
+    char buffer[1024];
+    char str[] = "pgpgin";
+    
+    if(f = fopen("/proc/vmstat", "r"))
+    {
+        while(fgets(buffer, sizeof(buffer), f))
+        {
+            if(strstr(buffer, str))
+            {
+                fseek(f, -(long)strlen(buffer), SEEK_CUR);
+                if(fscanf(f, "pgpgin %d pgpgout %d pswpin %d pswpout %d", 
+                          &(minfo->pgin), &(minfo->pgout), &(minfo->swpin), &(minfo->swpout)) == 0)
+                {
+                    fprintf(stderr, "Error: Cannot read info from /proc/vmstat\n");
+                    fclose(f);
+                    return 1;
+                }
+                else 
+                {   printf("----- VM stats ------\n");
+                    printf("Number of pages paged in = %d\n", minfo->pgin);
+                    printf("Number of pages paged out = %d\n", minfo->pgout);
+                    printf("Number of pages swaped in = %d\n", minfo->swpin);
+                    printf("Number of pages swaped out = %d\n", minfo->swpout);					
+                }
+            }
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Error Cannot open /proc/vmstat");
+        return 1;
+    }
+    
+    return 0;
+}
+
+
+
 void readmeminfo()
 {
         FILE* f;
+	mem_info meminfo;
         int memTotal, memUsed, memFree;
         float util;
 
         if (f = fopen("/proc/meminfo", "r"))
         {
-	  if (fscanf(f, "MemTotal: %d kB MemFree: %d kb", &memTotal, &memFree) == 0) {
+	  if (fscanf(f, "MemTotal: %d kB MemFree: %d kb", &meminfo.total, &meminfo.free) == 0) {
 	    fclose(f);
 	    fprintf(stderr, "Error : Can not read MemTotal and MemFree from /proc/meminfo\n");
 	  } else {  
 	  
-	    memUsed = memTotal - memFree;
-	    util = (float) memUsed/(1.0*memTotal)*100;
+	    meminfo.used = memTotal - memFree;
+	    meminfo.util = (float) memUsed/(1.0*memTotal)*100;
 	    
 	    printf ("--- Memory Stats ---\n");
-	    printf ("Free Memory = %d KB\n", memFree);
-	    printf ("Used Memory = %d KB\n", memUsed);
-	    printf ("Total Memory = %d KB\n", memTotal);
-	    printf ("Memory Utilization = %5.2f%%\n", util);
+	    printf ("Free Memory = %d KB\n", meminfo.free);
+	    printf ("Used Memory = %d KB\n", meminfo.used);
+	    printf ("Total Memory = %d KB\n", meminfo.total);
+	    printf ("Memory Utilization = %5.2f%%\n", meminfo.util);
 	    fclose(f);
 	  }
         }
@@ -59,6 +115,7 @@ void readmeminfo()
         {
 	  fprintf(stderr, "Error : Can not open /proc/meminfo");
         }
+	readvmstats(&meminfo);
 
 }
 
