@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "readperfstats.h"
+#include "perfstats.h"
 
 int main()
 {
@@ -21,5 +21,5 @@ int main()
   printf("Number of pages paged out = %d\n", meminfo.pgout);
   printf("Number of pages swaped in = %d\n", meminfo.swpin);
   printf("Number of pages swaped out = %d\n", meminfo.swpout);					
-
+  readprocstats();
 }

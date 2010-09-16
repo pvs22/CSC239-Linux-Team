@@ -6,7 +6,7 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../readperfstats/readperfstats.h"
+#include "../perfstats/perfstats.h"
 
 using namespace std;
 void printmemstats (char* buffer);
