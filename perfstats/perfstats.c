@@ -63,28 +63,34 @@ int readmeminfo(mem_info* meminfo)
 }
 
 
-void readcpuinfo(){
-        FILE* f;
-        /* add in variables used to display cpu info */
 
-        if (f = fopen("/proc/***", "r"))
-        {
-	  /* use fscanf to the read data */
-	  if (fscanf(f, "***format_string***" /* variable list */) == 0) {
-	    fclose(f);
-	    fprintf(stderr, "Error : Can not read from /proc/***\n");
-	  } else {  
-	    printf ("--- CPU Stats ---\n");
-	    /* print cpu stats */
-	    fclose(f);
-	  }
-        }
-        else
-        {
-	  fprintf(stderr, "Error : Can not open /proc/***");
-        }
+int readcpuinfo(cpu_info* cinfo)
+{
+  char str[4];
+  char newstr[4];
+  FILE *fp;
+  long int user,sys, nice, idle, val3, val4, val5, val6;
+  if(fp = fopen("/proc/stat", "r")){
+    if(fscanf(fp, "%s %ld %ld %ld %ld %ld %ld %ld %ld", str, &user, &nice, &sys, &idle, &val3, &val4, &val5, &val6)==0){
+      fclose(fp);
+      fprintf(stderr, "Error : Can not read from /proc/stat\n");
+    }else{
+      if(strcmp(str, "cpu")==0){
+	cinfo->user = user + nice;
+	cinfo->system = sys;
+	cinfo->idle = idle;
+      }
+      fclose(fp);
+    }
+  }else{
+    fprintf(stderr, "Error : Can not open /proc/stat");
+    return -1;
+  }
+  return 0;
+}
 
-};
+
+
 void readdiskioinfo(){
         FILE* f;
         /* add in variables used to display disk io info */

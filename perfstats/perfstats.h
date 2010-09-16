@@ -65,8 +65,15 @@ struct wallTime {
 
 
 
+typedef struct
+{
+  long int system;
+  long int user;
+  long int idle;
+} cpu_info;
+
 int readmeminfo(mem_info*);
-void readcpuinfo();
+int readcpuinfo(cpu_info*);
 void readdiskioinfo();
 
 

@@ -105,9 +105,9 @@ int main(int argc, char *argv[])
 void parseClientData(int afd)
 {
 	//TODO: read data from web server and call appropriate servers to get data
-	char buffer[255];
-	memset(buffer, 0, 255);
-	int status = read(afd, buffer, 255);
+	char buffer[1024];
+	memset(buffer, 0, 1024);
+	int status = read(afd, buffer, 1024);
 	cout << "Message from client: " << buffer << endl;
 
 	//TODO: Get list of servers from the web server data

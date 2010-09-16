@@ -9,7 +9,9 @@
 #include "../perfstats/perfstats.h"
 
 using namespace std;
-void printmemstats (char* buffer);
+
+int printmemstats (char* buffer);
+int printcpustats(char* buffer);
 
 int main (int argc, char *argv[])
 {
@@ -51,8 +53,9 @@ int main (int argc, char *argv[])
 	}
 	
 	char msg[2048];
-	printmemstats(msg);
-	int status = write(sfd, msg, strlen(msg));
+	int lastindex = printmemstats(msg);
+	lastindex = lastindex + printcpustats(msg + lastindex);
+	int status = write(sfd, msg, lastindex);//strlen(msg));
 	if( status == -1 )
 	{
 		cerr << "Error writing to server" << endl;
@@ -62,13 +65,27 @@ int main (int argc, char *argv[])
 	return 0;
 }
 
-void printmemstats (char* buffer){
+int printmemstats (char* buffer){
   mem_info meminfo;
   if (readmeminfo(&meminfo) != 0){
     printf("Could not read memory information\n");
-    return;
+    return 0;
+  }
+  int ret = sprintf (buffer, "--- Memory Stats ---\nFree Memory = %d KB\nUsed Memory = %d KB\nTotal Memory = %d KB\nMemory Utilization = %5.2f%%\nNumber of pages paged in = %d\nNumber of pages paged out = %d\nNumber of pages swaped in = %d\nNumber of pages swaped out = %d\n", 
+	   meminfo.free, meminfo.used, meminfo.total, meminfo.util, meminfo.pgin, meminfo.pgout, meminfo.swpin, meminfo.swpout);
+  return ret;
+  
+}
+
+
+int printcpustats(char* buffer){
+  cpu_info c;
+  if (readcpuinfo(&c) != 0){
+    printf("Could not read cpu information\n");
+    return 0;
   }
   
-  sprintf (buffer, "--- Memory Stats ---\nFree Memory = %d KB\nUsed Memory = %d KB\nTotal Memory = %d KB\nMemory Utilization = %5.2f%%\nNumber of pages paged in = %d\nNumber of pages paged out = %d\nNumber of pages swaped in = %d\nNumber of pages swaped out = %d\n", 
-	   meminfo.free, meminfo.used, meminfo.total, meminfo.util, meminfo.pgin, meminfo.pgout, meminfo.swpin, meminfo.swpout);
+  return sprintf (buffer, "--- CPU Stats ---\nUser = %ld \nSystem = %ld \nIdle = %ld\nTotal = %d\n", 
+	   c.user, c.system, c.idle, c.user + c.system +c.idle);
+  
 }
