@@ -1,11 +1,17 @@
 
-all: server client
+all: server client agent
 
 server: msserver.o
 	g++ -W -lpthread -g msserver.o -o server
 
 client: mstestclient.o
 	g++ -W -lpthread -g mstestclient.o perfstats.o -o testclient
+
+agent: agent.o
+	g++ -W -lpthread -g agent.o perfstats.o -o agent
+
+agent.o: agent.cpp perfstats.o
+	g++ -g -c -W agent.cpp
 
 msserver.o: msserver.cpp
 	g++ -g -c -W msserver.cpp 

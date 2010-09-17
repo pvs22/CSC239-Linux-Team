@@ -67,7 +67,7 @@ int main (int argc, char *argv[])
 
 int printmemstats (char* buffer){
   mem_info meminfo;
-  if (readmeminfo(&meminfo) != 0){
+  if (read_meminfo(&meminfo) != 0){
     printf("Could not read memory information\n");
     return 0;
   }
@@ -80,7 +80,7 @@ int printmemstats (char* buffer){
 
 int printcpustats(char* buffer){
   cpu_info c;
-  if (readcpuinfo(&c) != 0){
+  if (read_cpuinfo(&c) != 0){
     printf("Could not read cpu information\n");
     return 0;
   }

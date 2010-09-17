@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include "perfstats.h"
 
-int readvmstats(mem_info* minfo)
+int read_vmstats(mem_info* minfo)
 {
     FILE *f;
     char buffer[1024];
@@ -39,7 +39,7 @@ int readvmstats(mem_info* minfo)
 
 
 
-int readmeminfo(mem_info* meminfo)
+int read_meminfo(mem_info* meminfo)
 {
         FILE* f;
 
@@ -58,13 +58,13 @@ int readmeminfo(mem_info* meminfo)
 	  fprintf(stderr, "Error : Can not open /proc/meminfo");
 	  return -1;
 	}
-	readvmstats(meminfo);
+	read_vmstats(meminfo);
 	return 0;
 }
 
 
 
-int readcpuinfo(cpu_info* cinfo)
+int read_cpuinfo(cpu_info* cinfo)
 {
   char str[4];
   char newstr[4];
@@ -91,7 +91,7 @@ int readcpuinfo(cpu_info* cinfo)
 
 
 
-void readdiskioinfo(){
+void read_diskioinfo(){
         FILE* f;
         /* add in variables used to display disk io info */
 
@@ -115,7 +115,7 @@ void readdiskioinfo(){
 
 };
 
-void readnetworkinfo()
+int read_networkinfo(ns* nsStats, int* numAdapters)
 {
 	FILE* f;
 	int a,j;
@@ -127,8 +127,9 @@ void readnetworkinfo()
 	int buffer_size = 1024;
 	char buffer[buffer_size];
 	int fscanf_value;
-
-	ns b[3];
+	int MAX_NUM_ADAPTERS = 128;
+	ns* b = (ns*)malloc(sizeof(ns) * MAX_NUM_ADAPTERS);
+	nsStats = b;
 
         if (f = fopen("/proc/net/dev", "r")) {
 	  fgets(buffer, buffer_size, f);
@@ -138,16 +139,16 @@ void readnetworkinfo()
 	    {
 	      if (fscanf_value== 0){
 		fclose(f);
-		fprintf(stderr, "Error : Can not read network data from /proc/net/dev\n");
-		return;
+		fprintf(stderr, "Error : Can not read network data from /proc/net/dev.\n");
+		return -1;
 	      } else {
-		printf ("--- Network Stats ---\n");
+		/*printf ("--- Network Stats ---\n");
 		printf("Network Name		= %s \n", b[i].networkName);
 		printf ("Bytes Received		= %d \n", b[i].bytesRec);
 		printf ("Bytes Sent 		= %d \n", b[i].bytesSent);
 		printf ("Error			= %d \n", b[i].errs);
 		printf ("Collisions		= %d \n", b[i].colls);
-		
+		*/
 		total_bytesrec = total_bytesrec + b[i].bytesRec;
 		total_bytesent = total_bytesent + b[i].bytesSent;
 		total_errs	 = total_errs + b[i].errs;
@@ -156,14 +157,17 @@ void readnetworkinfo()
 	      }
 	      fscanf_value = fscanf(f, " %[^:]: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", b[i].networkName, &b[i].bytesRec, &b[i].errs, &a, &a, &a, &a, &a, &a, &b[i].bytesSent,&b[i].errs,&a,&a,&b[i].colls, &a, &a, &a);
 	    }
-	  printf("-----Overall Network Stats---\n");
+	  /*printf("-----Overall Network Stats---\n");
 	  printf("Total bytes received 	= %d \n",total_bytesrec);
 	  printf("Total bytes sent 	= %d \n",total_bytesent);
 	  printf("Total errors		= %d \n",total_errs);
-	  printf("Total collision 	= %d \n",total_colls);
+	  printf("Total collision 	= %d \n",total_colls);*/
+	  *numAdapters = i + 1; 
 	} else {
-	  fprintf(stderr, "Error : Can not open /proc/meminfo");
+	  fprintf(stderr, "Error : Can not open /proc/meminfo.\n");
+	  return -1;
 	}	
+	return 0;
 };
 
 
@@ -171,7 +175,7 @@ int is_process (char *str); // checks if the dir name "*str" correspond to a pro
 void getWallTime (struct wallTime **wt, unsigned long tv); // convert Jiffies to days/hrs/mins/secs/msecs
 void getProcStats (struct procStats *procPtr, int iter); // gets process stats from /proc dir
  
-void readprocstats ()
+int read_procstats ()
 {
         struct procStats p;
         struct procStatNode *tmp;
@@ -212,6 +216,7 @@ void readprocstats ()
                 free(tmp);
         }
         printf ("\nDone...\n");
+	return 0;
 }
 
 int str2int (char* str, int index)

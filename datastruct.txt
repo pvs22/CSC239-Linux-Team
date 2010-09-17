@@ -1,0 +1,1 @@
+|(platform id), 1 byte | (# cpu), 4 bytes| (#cpu struct) * sizeof(cpu struct) | mem_struct | (#logical drives), 4 bytes | (#disk struct) * sizeof(dist struct) | (#network interfaces) * sizeof(network struct) | # process (4 bytes) | # process * sizeof(proc struct) 

@@ -72,13 +72,13 @@ typedef struct
   long int idle;
 } cpu_info;
 
-int readmeminfo(mem_info*);
-int readcpuinfo(cpu_info*);
-void readdiskioinfo();
+int read_meminfo(mem_info*);
+int read_cpuinfo(cpu_info*);
+void read_diskioinfo();
 
 
-void readnetworkinfo();
-void readprocstats();
+int read_networkinfo(ns*, int*);
+int read_procstats();
 
 
 #endif
