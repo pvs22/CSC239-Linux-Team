@@ -28,6 +28,7 @@ typedef struct
   uint64_t ctxt; // total number of context switches.
   mem_info* memInfo;
   uint64_t numLogDrives;
+  void* logDriveStructs;
   uint64_t numNetworkAdapters;
   void* networkAdapterStructs;
   uint64_t numProcs;
