@@ -18,8 +18,7 @@ int main (int argc, char *argv[])
 	int 	sfd		= 0;
 	hostent	*server = NULL;
 	sockaddr_in	serv_addr;
-
-	if( argc < 2 )
+	if( argc < 3 )
 	{
 		cout << "Usage: " << argv[0] << " server portnum" << endl;
 		return 0;
@@ -32,7 +31,6 @@ int main (int argc, char *argv[])
 		cerr << "Error opening socket" << endl;
 		return 1;
 	}
-
 	//get server
 	server = gethostbyname(argv[1]);
 	if( server == NULL )
@@ -40,7 +38,6 @@ int main (int argc, char *argv[])
 		cerr << "Server " << argv[1] << " not found!" << endl;
 		return 1;
 	}
-
 	//connect to server
 	memset(&serv_addr, 0, sizeof(sockaddr_in));
 	serv_addr.sin_family = AF_INET;
@@ -51,14 +48,13 @@ int main (int argc, char *argv[])
 		cerr << "Error connecting to server" << endl;
 		return 1;
 	}
-	
-	char msg[2048];
-	int lastindex = printmemstats(msg);
-	lastindex = lastindex + printcpustats(msg + lastindex);
-	int status = write(sfd, msg, lastindex);//strlen(msg));
+	char msg[8] = "ws msg ";
+	//int lastindex = printmemstats(msg);
+	//lastindex = lastindex + printcpustats(msg + lastindex);
+	int status = write(sfd, msg, strlen(msg));//strlen(msg));
 	if( status == -1 )
 	{
-		cerr << "Error writing to server" << endl;
+		cerr << "Error writing to server from mstestclient" << endl;
 		return 1;
 	}
 

@@ -11,6 +11,8 @@ int read_vmstats(mem_info* minfo)
     char buffer[1024];
     char str[] = "pgpgin";
     
+    int pgin, pgout, swpin, swpout;
+
     if(f = fopen("/proc/vmstat", "r"))
     {
         while(fgets(buffer, sizeof(buffer), f))
@@ -19,12 +21,16 @@ int read_vmstats(mem_info* minfo)
             {
                 fseek(f, -(long)strlen(buffer), SEEK_CUR);
                 if(fscanf(f, "pgpgin %d pgpgout %d pswpin %d pswpout %d", 
-                          &(minfo->pgin), &(minfo->pgout), &(minfo->swpin), &(minfo->swpout)) == 0)
+                          &pgin, &pgout, &swpin, &swpout) == 0)
                 {
                     fprintf(stderr, "Error: Cannot read info from /proc/vmstat\n");
                     fclose(f);
                     return 1;
                 }
+		minfo->pgin = pgin;
+		minfo->pgout = pgout;
+		minfo->swpin = swpin;
+		minfo->swpout = swpout;
             }
         }
     }
@@ -42,14 +48,15 @@ int read_vmstats(mem_info* minfo)
 int read_meminfo(mem_info* meminfo)
 {
         FILE* f;
-
+	int mtotal, mfree;
         if (f = fopen("/proc/meminfo", "r")) {
-	  if (fscanf(f, "MemTotal: %d kB MemFree: %d kb", &(meminfo->total), &(meminfo->free)) == 0) {
+	  if (fscanf(f, "MemTotal: %d kB MemFree: %d kb", &mtotal, &mfree) == 0) {
 	    fclose(f);
 	    fprintf(stderr, "Error : Can not read MemTotal and MemFree from /proc/meminfo\n");
 	    return -1;
 	  } else {  
-	    
+	    meminfo->total = mtotal;
+	    meminfo->free = mfree;
 	    meminfo->used = meminfo->total - meminfo->free;
 	    meminfo->util = (float) meminfo->used/(1.0*meminfo->total)*100;	    
 	    fclose(f);
@@ -115,26 +122,32 @@ void read_diskioinfo(){
 
 };
 
-int read_networkinfo(ns* nsStats, int* numAdapters)
+int read_networkinfo(ns* nsStats, uint64_t* numAdapters)
 {
 	FILE* f;
 	int a,j;
-	int total_colls = 0 ;
-	int total_bytesrec = 0;
-	int total_bytesent = 0;
-	int total_errs = 0;
-	int i = 0;
-	int buffer_size = 1024;
+	uint64_t total_colls = 0 ;
+	uint64_t total_bytesrec = 0;
+	uint64_t total_bytesent = 0;
+	uint64_t total_errs = 0;
+	uint64_t i = 0;
+	uint64_t buffer_size = 1024;
 	char buffer[buffer_size];
-	int fscanf_value;
-	int MAX_NUM_ADAPTERS = 128;
+	uint64_t fscanf_value;
+	uint64_t MAX_NUM_ADAPTERS = 128;
 	ns* b = (ns*)malloc(sizeof(ns) * MAX_NUM_ADAPTERS);
 	nsStats = b;
 
         if (f = fopen("/proc/net/dev", "r")) {
 	  fgets(buffer, buffer_size, f);
 	  fgets(buffer, buffer_size, f);
-	  fscanf_value = fscanf(f, " %[^:]: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", b[i].networkName, &b[i].bytesRec, &b[i].errs, &a, &a, &a, &a, &a, &a, &b[i].bytesSent, &b[i].errs, &a, &a, &b[i].colls, &a, &a, &a);
+	  int bytesRec, errs, bytesSent, colls;
+	  
+	  fscanf_value = fscanf(f, " %[^:]: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", b[i].networkName, &bytesRec, &errs, &a, &a, &a, &a, &a, &a, &bytesSent, &errs, &a, &a, &colls, &a, &a, &a);
+	  b[i].bytesRec = bytesRec;
+	  b[i].errs = errs;
+	  b[i].bytesSent = bytesSent;
+	  b[i].colls = colls;
 	  while (!feof(f))
 	    {
 	      if (fscanf_value== 0){
@@ -142,26 +155,20 @@ int read_networkinfo(ns* nsStats, int* numAdapters)
 		fprintf(stderr, "Error : Can not read network data from /proc/net/dev.\n");
 		return -1;
 	      } else {
-		/*printf ("--- Network Stats ---\n");
-		printf("Network Name		= %s \n", b[i].networkName);
-		printf ("Bytes Received		= %d \n", b[i].bytesRec);
-		printf ("Bytes Sent 		= %d \n", b[i].bytesSent);
-		printf ("Error			= %d \n", b[i].errs);
-		printf ("Collisions		= %d \n", b[i].colls);
-		*/
 		total_bytesrec = total_bytesrec + b[i].bytesRec;
 		total_bytesent = total_bytesent + b[i].bytesSent;
 		total_errs	 = total_errs + b[i].errs;
 		total_colls	 = total_colls + b[i].colls;
 		i++;
 	      }
-	      fscanf_value = fscanf(f, " %[^:]: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", b[i].networkName, &b[i].bytesRec, &b[i].errs, &a, &a, &a, &a, &a, &a, &b[i].bytesSent,&b[i].errs,&a,&a,&b[i].colls, &a, &a, &a);
+	      fscanf_value = fscanf(f, " %[^:]: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", b[i].networkName, &bytesRec, &errs, &a, &a, &a, &a, &a, &a, &bytesSent, &errs,&a,&a,&colls, &a, &a, &a);
+	      
+	      b[i].bytesRec = bytesRec;
+	      b[i].errs = errs;
+	      b[i].bytesSent = bytesSent;
+	      b[i].colls = colls;
+	      
 	    }
-	  /*printf("-----Overall Network Stats---\n");
-	  printf("Total bytes received 	= %d \n",total_bytesrec);
-	  printf("Total bytes sent 	= %d \n",total_bytesent);
-	  printf("Total errors		= %d \n",total_errs);
-	  printf("Total collision 	= %d \n",total_colls);*/
 	  *numAdapters = i + 1; 
 	} else {
 	  fprintf(stderr, "Error : Can not open /proc/meminfo.\n");
@@ -185,35 +192,35 @@ int read_procstats ()
 /*--------- Optional code to check if above function call worked --------*/
 
         printf ("---Process State Stats---\n");
-        printf ("Total         : %d\n", p.procTotal);
-        printf ("Running       : %d\n", p.procRun);
-        printf ("Sleeping      : %d\n", p.procSleep);
-        printf ("Disk Sleeping : %d\n", p.procDSleep);
-        printf ("Zombie        : %d\n", p.procZombie);
-        printf ("Trace/Stopped : %d\n", p.procTrace);
-        printf ("Paging        : %d\n", p.procPaging);
+        printf ("Total         : %d\n", (int)p.procTotal);
+        printf ("Running       : %d\n", (int)p.procRun);
+        printf ("Sleeping      : %d\n", (int)p.procSleep);
+        printf ("Disk Sleeping : %d\n", (int)p.procDSleep);
+        printf ("Zombie        : %d\n", (int)p.procZombie);
+        printf ("Trace/Stopped : %d\n", (int)p.procTrace);
+        printf ("Paging        : %d\n", (int)p.procPaging);
         printf ("---------------------------------------\n");
 
 
         while (p.head)
         {
-                printf ("PID               : %d\n", p.head->pid);
-		printf ("Priority          : %d\n", p.head->priority);
-                printf ("User ID           : %d\n", p.head->userID);
-                printf ("Total Program Size: %d\n", p.head->sizeTotal);
-                printf ("Resident Set  Size: %d\n", p.head->sizeRes);
-                printf ("Shared Pages      : %d\n", p.head->pages);
-                printf ("State             : %c\n", p.head->state);
-                printf ("CPU               : %f\n", p.head->cpuUtil);
-                printf ("MEM               : %f\n", p.head->memUtil);
-                printf ("%d Day %d Hr %d Min %d Sec %d mSec\n", p.head->wt->days, p.head->wt->hours, p.head->wt->mins, p.head->wt->secs, p.head->wt->msecs);
-                printf ("CMD               : %s\n", p.head->cmd);
-                printf ("---------------------------------------\n");
-
-                tmp = p.head;
-                p.head = p.head->nxtProc;
-                free(tmp->wt);
-                free(tmp);
+	  printf ("PID               : %d\n", (int)p.head->pid);
+	  printf ("Priority          : %d\n", (int)p.head->priority);
+	  printf ("User ID           : %d\n", (int)p.head->userID);
+	  printf ("Total Program Size: %d\n", (int)p.head->sizeTotal);
+	  printf ("Resident Set  Size: %d\n", (int)p.head->sizeRes);
+	  printf ("Shared Pages      : %d\n", (int)p.head->pages);
+	  printf ("State             : %c\n", p.head->state);
+	  printf ("CPU               : %f\n", p.head->cpuUtil);
+	  printf ("MEM               : %f\n", p.head->memUtil);
+	  printf ("%d Day %d Hr %d Min %d Sec %d mSec\n", p.head->wt->days, p.head->wt->hours, p.head->wt->mins, p.head->wt->secs, p.head->wt->msecs);
+	  printf ("CMD               : %s\n", p.head->cmd);
+	  printf ("---------------------------------------\n");
+	  
+	  tmp = p.head;
+	  p.head = p.head->nxtProc;
+	  free(tmp->wt);
+	  free(tmp);
         }
         printf ("\nDone...\n");
 	return 0;
@@ -315,13 +322,17 @@ void getProcStats (struct procStats *procPtr, int iter)
                                 sprintf (fname, "/proc/%s/statm", ent->d_name);
                                 if (f = fopen(fname, "r"))
                                 {
-                                        fscanf (f, "%d %d %d", &(nodePtr->sizeTotal), &(nodePtr->sizeRes), &(nodePtr->pages));
-                                        fclose(f);
-                                        // To avoid divide by 0
-                                        if (nodePtr->sizeTotal > 0)
-                                                nodePtr->memUtil = (nodePtr->sizeRes/(1.0*nodePtr->sizeTotal))*100;
-                                        else
-                                                nodePtr->memUtil = 0.0;
+				  int sizeTotal, sizeRes, pages;
+				  fscanf (f, "%d %d %d", &sizeTotal, &sizeRes, &pages);
+				  nodePtr->sizeTotal = sizeTotal;
+				  nodePtr->sizeRes = sizeRes;
+				  nodePtr->pages = pages;
+				  fclose(f);
+				  // To avoid divide by 0
+				  if (nodePtr->sizeTotal > 0)
+				    nodePtr->memUtil = (nodePtr->sizeRes/(1.0*nodePtr->sizeTotal))*100;
+				  else
+				    nodePtr->memUtil = 0.0;
                                 } else
                                         printf ("Error! %s file not found\n", fname);
 

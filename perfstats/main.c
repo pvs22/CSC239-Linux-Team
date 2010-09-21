@@ -7,7 +7,7 @@
 int main()
 {
   mem_info meminfo;
-  if (readmeminfo(&meminfo) != 0) {
+  if (read_meminfo(&meminfo) != 0) {
     printf("Error reading memory information.\n");
     return -1;
   }
@@ -21,5 +21,5 @@ int main()
   printf("Number of pages paged out = %d\n", meminfo.pgout);
   printf("Number of pages swaped in = %d\n", meminfo.swpin);
   printf("Number of pages swaped out = %d\n", meminfo.swpout);					
-  readprocstats();
+  read_procstats();
 }

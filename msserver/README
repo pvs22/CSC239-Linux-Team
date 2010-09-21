@@ -1,5 +1,18 @@
-There is a msserver.cpp which would create a server and listen for web server.  Once it detects a connection from the web server, it would create appropriate # of threads and try to get information from all the servers.
-mstestclient.cpp is just a test file to test out the server.
+There is a msserver.cpp which creates a server and listens for web server client and sends commands to the agents.  Once it detects a connection from the web server, it creates the appropriate # of threads and tries to get the data from the agents.
+mstestclient.cpp is a test web client.
 
-Usage: server 3000
-Usage: testclient localhost 3000
+To test the program open three terminals and do the following commands in the below order:
+terminal1: run "./agent" to start the agent for collecting the performance data. 
+terminal2: run "./server 3000" to start the management
+terminal3: run "./testclient localhost 3000"
+
+
+In terminal2 the server process should print: 
+Message from client: ws msg 
+Reading perf_stats
+Platform Id:L
+Name:agent1         
+Error connecting to server gaia.ecs.csus.edu
+
+
+

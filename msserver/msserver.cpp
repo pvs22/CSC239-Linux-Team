@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <pthread.h>
 #include <netdb.h>
+#include "../perfstats/perfstats.h"
+#include "perfstatsnetwork.h"
 
 using namespace std;
 
@@ -19,6 +21,7 @@ typedef struct _serverInfo
 
 void* getDataFromServers(void *arg);
 void parseClientData(int afd);
+perf_stats* read_agent_perfstats(int);
 
 int main(int argc, char *argv[])
 {
@@ -107,22 +110,21 @@ void parseClientData(int afd)
 	//TODO: read data from web server and call appropriate servers to get data
 	char buffer[1024];
 	memset(buffer, 0, 1024);
-	int status = read(afd, buffer, 1024);
+	int status = read(afd, buffer, 8);
 	cout << "Message from client: " << buffer << endl;
-
 	//TODO: Get list of servers from the web server data
 	const int numOfServers = 2;
 	string servers[numOfServers];
 	servers[0] = "localhost";
 	servers[1] = "gaia.ecs.csus.edu";
-
+	
 	pthread_t thread[numOfServers];
 	for(int i = 0; i < numOfServers; i++)
 	{
-		serverInfo si;
-		si.serverName = servers[i];
-		si.portNumber = 3000;
-		pthread_create(&thread[i], NULL, getDataFromServers, (void*)&si);
+	  serverInfo* si = new serverInfo();
+	  si->serverName = servers[i];
+	  si->portNumber = 3000;
+	  pthread_create(&thread[i], NULL, getDataFromServers, (void*)si);
 	}
 
 	for(int i = 0; i < numOfServers; i++)
@@ -139,14 +141,12 @@ void* getDataFromServers(void *arg)
 	hostent	*server	= NULL;
 	sockaddr_in serv_addr;
 	serverInfo *si = (serverInfo*)arg;
-
 	int sfd = socket(AF_INET, SOCK_STREAM, 0);
 	if( sfd == -1 )
 	{
 		cerr << "Error opening socket" << endl;
 		return NULL;
 	}
-
 	//get server
 	server = gethostbyname(si->serverName.c_str());
 	if( server == NULL )
@@ -154,7 +154,6 @@ void* getDataFromServers(void *arg)
 		cerr << "Server " << si->serverName << " not found" << endl;
 		return NULL;
 	}
-
 	//connect to server
 	memset(&serv_addr, 0, sizeof(sockaddr_in));
 	serv_addr.sin_family = AF_INET;
@@ -163,16 +162,52 @@ void* getDataFromServers(void *arg)
 	if( connect(sfd, (const sockaddr*)&serv_addr, sizeof(sockaddr_in)) == -1 )
 	{
 		
-		cerr << "Error connecting to server" << endl;
-		return NULL;
+	  cerr << "Error connecting to server " << si->serverName.c_str() << endl;
+	  return NULL;
 	}
-
-	//TODO: send commands to  servers
-
+	//TODO: send commands to  servers       	
 	//TODO: read response from servers 
-	//int status = read(sfd, buffer, bufSize);
+	printf("Reading perf_stats\n");
+	perf_stats* stats = read_agent_perfstats(sfd);
+	print_perfstats(stats);
 	
 } //getDataFromServers()
 
 
+perf_stats* read_agent_perfstats(int sfd){
+  perf_stats* stats = (perf_stats*)malloc(sizeof(perf_stats));
+  if (read(sfd, &(stats->platformID), sizeof(char)) == -1){
+    printf("Error reading stats->platformID from network socket.\n");
+  }
+  if (read(sfd, stats->agentName, 16 * sizeof(char)) == -1){
+    printf("Error reading stats->agentName from network socket.\n");
+  }
+  if (read(sfd, &(stats->numCPUs), sizeof(uint64_t)) == -1){
+    printf("Error reading &(stats->numCPUs) from network socket.\n");
+  }
+  stats->cpuStructs = (cpu_info*) malloc(stats->numCPUs * sizeof(cpu_info));
+  if (read(sfd, stats->cpuStructs, stats->numCPUs * sizeof(cpu_info)) == -1){
+    printf("Error reading stats->cpuStructs from network socket.\n");
+  }
+  if (read(sfd, &(stats->ctxt), sizeof(uint64_t)) == -1){
+    printf("Error reading &(stats->ctxt) from network socket.\n");
+  }
+  if (read(sfd, &(stats->memInfo), sizeof(mem_info)) == -1){
+    printf("Error reading &(stats->memInfo) from network socket.\n");
+  }
+  if (read(sfd, &(stats->numLogDrives), sizeof(uint64_t)) == -1){
+    printf("Error reading &(stats->numLogDrives) from network socket.\n");
+  }
+  if (read(sfd, &(stats->numNetworkAdapters), sizeof(uint64_t)) == -1){
+    printf("Error reading &(stats->numNetworkAdapters) from network socket.\n");
+  }
+  /*stats->networkAdapterStructs = (ns*)malloc(stats->numNetworkAdapters * sizeof(ns));
+  if (read(sfd, stats->networkAdapterStructs, sizeof(ns)) == -1){
+    printf("Error reading stats->networkAdapterStructs from network socket.\n");
+  }
+  if (read(sfd, &(stats->numProcs), sizeof(uint64_t)) == -1){
+    printf("Error reading &(stats->numProcs) from network socket.\n");
+    }*/
+  return stats;
+}
 
