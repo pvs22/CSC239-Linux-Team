@@ -15,7 +15,7 @@ using namespace std;
 
 typedef struct _serverInfo
 {
-	string 	serverName;
+	char* 	serverName;
 	int		portNumber;
 } serverInfo;
 
@@ -113,23 +113,27 @@ void parseClientData(int afd)
 	int status = read(afd, buffer, 8);
 	cout << "Message from client: " << buffer << endl;
 	//TODO: Get list of servers from the web server data
-	const int numOfServers = 2;
+	const int numOfServers = 1;
 	string servers[numOfServers];
 	servers[0] = "localhost";
-	servers[1] = "gaia.ecs.csus.edu";
-	
+	/*servers[1] = "gaia.ecs.csus.edu";*/
+	serverInfo* si[numOfServers];
 	pthread_t thread[numOfServers];
 	for(int i = 0; i < numOfServers; i++)
 	{
-	  serverInfo* si = new serverInfo();
-	  si->serverName = servers[i];
-	  si->portNumber = 3000;
-	  pthread_create(&thread[i], NULL, getDataFromServers, (void*)si);
+	  si[i] = (serverInfo*)malloc(sizeof(serverInfo));
+	  si[i]->serverName = (char*)malloc(servers[i].size() + 1);
+	  strcpy(si[i]->serverName,servers[i].c_str());
+	  si[i]->portNumber = 3000;
+	  pthread_create(&thread[i], NULL, getDataFromServers, (void*)si[i]);
 	}
 
-	for(int i = 0; i < numOfServers; i++)
-		pthread_join(thread[i], NULL);
-
+	for(int i = 0; i < numOfServers; i++){
+	  pthread_join(thread[i], NULL);
+	  free(si[i]->serverName);
+	  free(si[i]);
+	}
+	
 	//TODO: combine information and send to web server
 
 } //parseClientData()
@@ -148,7 +152,7 @@ void* getDataFromServers(void *arg)
 		return NULL;
 	}
 	//get server
-	server = gethostbyname(si->serverName.c_str());
+	server = gethostbyname(si->serverName);
 	if( server == NULL )
 	{
 		cerr << "Server " << si->serverName << " not found" << endl;
@@ -162,7 +166,7 @@ void* getDataFromServers(void *arg)
 	if( connect(sfd, (const sockaddr*)&serv_addr, sizeof(sockaddr_in)) == -1 )
 	{
 		
-	  cerr << "Error connecting to server " << si->serverName.c_str() << endl;
+	  cerr << "Error connecting to server " << si->serverName << endl;
 	  return NULL;
 	}
 	//TODO: send commands to  servers       	
