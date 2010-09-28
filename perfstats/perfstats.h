@@ -47,24 +47,14 @@ struct procStatNode {
         uint64_t sizeRes;    // Resident Set size
         uint64_t pages;      // Shared pages
         char state;     // Process Status
-        float cpuUtil;  // Process CPU utilization
+        long int cpuTime;  // Process CPU utilization  
         float memUtil;  // Process memory utilization
-        struct wallTime *wt;// Running time (wall time)
+	long int wallTime;// Running time (wall time)	
         char cmd[81];   // Process Command
-	uint64_t priority;
-	uint64_t userID;
+	uint64_t priority; // Process Priority
+	uint64_t userID;  // UserId
         struct procStatNode *nxtProc;
 };
-
-struct wallTime {
-        short int days;
-        short int hours;
-        short int mins;
-        short int secs;
-        short int msecs;
-};
-
-
 
 typedef struct
 {
@@ -77,11 +67,10 @@ typedef struct
 int read_meminfo(mem_info*);
 int read_cpuinfo(cpu_info*);
 void read_diskioinfo();
-
-
 int read_networkinfo(ns*, uint64_t*);
-int read_procstats();
-
+int read_procstats(struct procStats*);
+int is_process (char *str); // checks if the dir name "*str" correspond to a process
+void getProcStats (struct procStats *procPtr, int iter); // gets process stats from /proc dir
 
 #endif
 

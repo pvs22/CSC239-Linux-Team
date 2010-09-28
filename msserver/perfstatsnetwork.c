@@ -53,10 +53,13 @@ int send_perfstats(int afd, perf_stats* stats){
   }
   /*  if (write(afd, stats->networkAdapterStructs, stats->numNetworkAdapters * sizeof(ns)) == -1){
     printf("Error writing stats->networkAdapterStructs to network socket.\n");
-  }
+  }*/
   if (write(afd, &(stats->numProcs), sizeof(uint64_t)) == -1){
     printf("Error writing &(stats->numProcs) to network socket.\n");
-    }*/  
+    }  
+  if (write(afd, stats->procStructs, stats->numProcs * sizeof(struct procStatNode)) == -1){
+    printf("Error writing &(stats->procStructs) to network socket.\n");
+    }  
 }
 
 
@@ -117,7 +120,31 @@ int copy_networkadapter_stats(perf_stats* stats){
 }
 
 int copy_process_stats(perf_stats* stats){
-  /* TODO */
+  struct procStats p;
+  struct procStatNode *tmp, *tmpp;
+  int i;
+
+  read_procstats(&p);
+  printf ("Read proc stats\n");
+  stats->numProcs = p.procTotal;
+  stats->procStructs = (struct procStatNode *) malloc (p.procTotal * (sizeof(struct procStatNode)));
+  tmp = (struct procStatNode *) stats->procStructs;
+  for (i = 0;i < p.procTotal;i ++)
+  {
+     tmp->pid      = p.head->pid;
+     tmp->sizeTotal= p.head->sizeTotal;
+     tmp->sizeRes  = p.head->sizeRes;
+     tmp->pages    = p.head->pages;
+     tmp->state    = p.head->state;
+     tmp->cpuTime  = p.head->cpuTime;
+     tmp->memUtil  = p.head->memUtil;
+     tmp->wallTime = p.head->wallTime;
+     strcpy(tmp->cmd, p.head->cmd);
+     tmp = (struct procStatNode *) tmp + 1;
+     tmpp = p.head;
+     p.head = p.head->nxtProc;
+     free(tmpp);
+  }
   return 0;
 }
 
@@ -131,8 +158,6 @@ int print_name(perf_stats* stats){
   printf("Name:%s\n", stats->agentName);
   return 0;
 }
-
-
 
 int print_mem_stats(perf_stats* stats){
   /* TODO */
@@ -155,6 +180,24 @@ int print_networkadapter_stats(perf_stats* stats){
 }
 
 int print_process_stats(perf_stats* stats){
-  /* TODO */
+  struct procStatNode *tmp;
+  int i;
+  printf ("---Process State Stats---\n");
+  printf ("Total         : %d\n", (int) stats->numProcs);
+  tmp = (struct procStatNode *) stats->procStructs;
+  for (i = 0;i < stats->numProcs;i ++)
+  {
+          printf ("PID               : %d\n",(int)  tmp->pid);
+          printf ("Total Program Size: %d\n",(int)  tmp->sizeTotal);
+          printf ("Resident Set  Size: %d\n",(int)  tmp->sizeRes);
+          printf ("Shared Pages      : %d\n",(int)  tmp->pages);
+          printf ("State             : %c\n", tmp->state);
+          printf ("CPU               : %ld\n", tmp->cpuTime);
+          printf ("MEM               : %f\n", tmp->memUtil);
+          printf ("Wall Time       : %ld\n", tmp->wallTime);
+          printf ("CMD               : %s\n", tmp->cmd);
+          printf ("--------------------------------------------------------------------------------\n");
+          tmp ++;
+  }
   return 0;
 }

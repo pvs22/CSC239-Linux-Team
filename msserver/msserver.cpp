@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	my_addr.sin_addr.s_addr = INADDR_ANY;
 	if( bind(sfd, (const sockaddr *)&my_addr, sizeof(sockaddr_in)) == -1 )
 	{
-		cerr << "Error binding" << endl;
+		cerr << "Server : Error binding" << endl;
 		return 1;
 	}
 
@@ -89,14 +89,15 @@ int main(int argc, char *argv[])
 		}
 		else if( pid > 0 ) // have child do the work
 		{
-			close(sfd); //child doesn't need sfd anymore, so close it
+//			close(sfd); //child doesn't need sfd anymore, so close it
 			parseClientData(afd);
+			close(afd);
 			return 0; // child should exit now
 		}
 		else //have parent go back to accepting connections
 		{
 			//parent doesn't need afd, so close it
-			close(afd);
+//			close(afd);
 		}
 	}
 
@@ -196,7 +197,8 @@ perf_stats* read_agent_perfstats(int sfd){
   if (read(sfd, &(stats->ctxt), sizeof(uint64_t)) == -1){
     printf("Error reading &(stats->ctxt) from network socket.\n");
   }
-  if (read(sfd, &(stats->memInfo), sizeof(mem_info)) == -1){
+  stats->memInfo = (mem_info*) malloc(sizeof(mem_info));
+  if (read(sfd, stats->memInfo, sizeof(mem_info)) == -1){
     printf("Error reading &(stats->memInfo) from network socket.\n");
   }
   if (read(sfd, &(stats->numLogDrives), sizeof(uint64_t)) == -1){
@@ -208,10 +210,14 @@ perf_stats* read_agent_perfstats(int sfd){
   /*stats->networkAdapterStructs = (ns*)malloc(stats->numNetworkAdapters * sizeof(ns));
   if (read(sfd, stats->networkAdapterStructs, sizeof(ns)) == -1){
     printf("Error reading stats->networkAdapterStructs from network socket.\n");
-  }
+  }*/
   if (read(sfd, &(stats->numProcs), sizeof(uint64_t)) == -1){
     printf("Error reading &(stats->numProcs) from network socket.\n");
-    }*/
+    }
+  stats->procStructs = (struct procStatNode*) malloc(stats->numProcs * sizeof(struct procStatNode));
+  if (read(sfd, stats->procStructs, stats->numProcs * sizeof(struct procStatNode)) == -1){
+    printf("Error reading &(stats->procStructs) to network socket.\n");
+    }  
   return stats;
 }
 

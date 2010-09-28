@@ -176,82 +176,15 @@ int read_networkinfo(ns* nsStats, uint64_t* numAdapters)
 	}	
 	return 0;
 };
-
-
-int is_process (char *str); // checks if the dir name "*str" correspond to a process
-void getWallTime (struct wallTime **wt, unsigned long tv); // convert Jiffies to days/hrs/mins/secs/msecs
-void getProcStats (struct procStats *procPtr, int iter); // gets process stats from /proc dir
  
-int read_procstats ()
+int read_procstats (struct procStats *p)
 {
-        struct procStats p;
-        struct procStatNode *tmp;
-
-        getProcStats (&p, 0);
-
-/*--------- Optional code to check if above function call worked --------*/
-
-        printf ("---Process State Stats---\n");
-        printf ("Total         : %d\n", (int)p.procTotal);
-        printf ("Running       : %d\n", (int)p.procRun);
-        printf ("Sleeping      : %d\n", (int)p.procSleep);
-        printf ("Disk Sleeping : %d\n", (int)p.procDSleep);
-        printf ("Zombie        : %d\n", (int)p.procZombie);
-        printf ("Trace/Stopped : %d\n", (int)p.procTrace);
-        printf ("Paging        : %d\n", (int)p.procPaging);
-        printf ("---------------------------------------\n");
-
-
-        while (p.head)
-        {
-	  printf ("PID               : %d\n", (int)p.head->pid);
-	  printf ("Priority          : %d\n", (int)p.head->priority);
-	  printf ("User ID           : %d\n", (int)p.head->userID);
-	  printf ("Total Program Size: %d\n", (int)p.head->sizeTotal);
-	  printf ("Resident Set  Size: %d\n", (int)p.head->sizeRes);
-	  printf ("Shared Pages      : %d\n", (int)p.head->pages);
-	  printf ("State             : %c\n", p.head->state);
-	  printf ("CPU               : %f\n", p.head->cpuUtil);
-	  printf ("MEM               : %f\n", p.head->memUtil);
-	  printf ("%d Day %d Hr %d Min %d Sec %d mSec\n", p.head->wt->days, p.head->wt->hours, p.head->wt->mins, p.head->wt->secs, p.head->wt->msecs);
-	  printf ("CMD               : %s\n", p.head->cmd);
-	  printf ("---------------------------------------\n");
-	  
-	  tmp = p.head;
-	  p.head = p.head->nxtProc;
-	  free(tmp->wt);
-	  free(tmp);
-        }
-        printf ("\nDone...\n");
+        getProcStats (p, 0);
 	return 0;
 }
 
-int str2int (char* str, int index)
-{
-        int i, j;
-        char buf1[50];
-        int val;
+void getProcStats (struct procStats *procPtr, int iter)
 
-        i = index+1;
-        while (str[i] == ' ')
-                i ++;
-
-//printf("\nii %d\n",i);
-        j = 0;
-        while (isdigit(str[i])&& str[i]!=' ')
-        {
-//		printf("\nstr[i] %c******************\n",str[i]);
-                buf1[j] = str[i];
-                j ++;i ++;
-        }
-        sscanf (buf1, "%d", &val);
-//printf("\nval %d buff %s--------------------\n",val,buf1);
-
-        return (val);
-}
-
-
-void getProcStats (struct procStats *procPtr, int iter) 
 {
         struct procStatNode *nodePtr;
         DIR *d;
@@ -263,8 +196,7 @@ void getProcStats (struct procStats *procPtr, int iter)
         long int priority, nice, num_thr, itrealv;
         unsigned long startTime;
         char fname[100];
-	char buffer[512];
-
+ 
         procPtr->procTotal = 0;
         procPtr->procRun = 0;
         procPtr->procSleep = 0;
@@ -273,7 +205,7 @@ void getProcStats (struct procStats *procPtr, int iter)
         procPtr->procTrace = 0;
         procPtr->procPaging = 0;
         procPtr->head = NULL;
-
+ 
         if (d = opendir ("/proc"))
         {
                 while (ent = readdir(d))
@@ -289,53 +221,35 @@ void getProcStats (struct procStats *procPtr, int iter)
                                         nodePtr = nodePtr->nxtProc;
                                 }
                                 nodePtr->nxtProc = NULL;
-
+ 
                                 sprintf (fname, "/proc/%s/stat", ent->d_name);
                                 if (f = fopen(fname, "r"))
                                 {
-                                        fscanf (f, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %llu", &(nodePtr->pid), &(nodePtr->cmd), &(nodePtr->state), &ppid, &pgrp, &session, &tty_nr, &tpgid, &flags, &minflt, &majflt, &cmajflt, &utime, &stime, &cutime, &cstime, &(nodePtr->priority), &nice, &num_thr, &itrealv, &startTime);
+                                        fscanf (f, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %llu", &(nodePtr->pid), &(nodePtr->cmd), &(nodePtr->state), &ppid, &pgrp, &session, &tty_nr, &tpgid, &flags, &minflt, &majflt, &cmajflt, &utime, &stime, &cutime, &cstime, &priority, &nice, &num_thr, &itrealv, &startTime);
                                         fclose(f);
-
+ 
                                         // Calculate CPU utilization here
-                                        nodePtr->cpuUtil = (utime + stime)/100.0;
+                                        // nodePtr->cpuUtil = (utime + stime)/100.0;
+                                        nodePtr->cpuTime = (utime + stime);
                                         // Assumption startTime/100 = wall time in secs
-                                        getWallTime(&(nodePtr->wt), startTime);
+                                        // getWallTime(&(nodePtr->wt), startTime);
+                                        nodePtr->wallTime = startTime/100;
                                 } else
                                         printf ("Error! %s file not found\n", fname);
-
-                                sprintf (fname, "/proc/%s/status", ent->d_name);
-                                if (f = fopen(fname, "r"))
-				{
-					while (fgets(buffer, sizeof buffer, f))
-			                {
-			                        if (strncmp(buffer,"Uid:",4) == 0)
-			                        {
-                                        		//printf ("inside %s  buf %s\n", fname,buffer);
-			                                (nodePtr->userID) = str2int(buffer, 4);
-			                        }
-					}
-                                        fclose(f);
-				} else
-                                        printf ("Error! %s file not found\n", fname);
-
-
+ 
                                 sprintf (fname, "/proc/%s/statm", ent->d_name);
                                 if (f = fopen(fname, "r"))
                                 {
-				  int sizeTotal, sizeRes, pages;
-				  fscanf (f, "%d %d %d", &sizeTotal, &sizeRes, &pages);
-				  nodePtr->sizeTotal = sizeTotal;
-				  nodePtr->sizeRes = sizeRes;
-				  nodePtr->pages = pages;
-				  fclose(f);
-				  // To avoid divide by 0
-				  if (nodePtr->sizeTotal > 0)
-				    nodePtr->memUtil = (nodePtr->sizeRes/(1.0*nodePtr->sizeTotal))*100;
-				  else
-				    nodePtr->memUtil = 0.0;
+                                        fscanf (f, "%d %d %d", &(nodePtr->sizeTotal), &(nodePtr->sizeRes), &(nodePtr->pages));
+                                        fclose(f);
+                                        // To avoid divide by 0
+                                        if (nodePtr->sizeTotal > 0)
+                                                nodePtr->memUtil = (nodePtr->sizeRes/(1.0*nodePtr->sizeTotal))*100;
+                                        else
+                                                nodePtr->memUtil = 0.0;
                                 } else
                                         printf ("Error! %s file not found\n", fname);
-
+ 
                                 // Process counters
                                 procPtr->procTotal ++;
                                 if (nodePtr->state == 'R')
@@ -366,28 +280,3 @@ int is_process (char *str)
             val = isdigit(str[i]);
         return val;
 }
-
-void getWallTime (struct wallTime **wt, unsigned long tv)
-{
-        *wt = (struct wallTime *) malloc(sizeof(struct wallTime));
-        // 24hrs*60mins*60secs*100 jiffies
-        (*wt)->days = tv/8640000;
-        tv = tv % 8640000;
-
-        // 60mins*60secs*100 jiffies
-        (*wt)->hours = tv/360000;
-        tv = tv % 360000;
-
-        // 60secs*100 jiffies
-        (*wt)->mins = tv/6000;
-        tv = tv % 6000;
-
-        // 100 jiffies
-        (*wt)->secs = tv/100;
-        tv = tv % 100;
-
-        // 10msecs
-        (*wt)->msecs = tv*10;
-}
-
-
