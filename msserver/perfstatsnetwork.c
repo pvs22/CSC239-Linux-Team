@@ -90,14 +90,14 @@ int copy_mem_stats(perf_stats* stats){
 int copy_cpu_stats(perf_stats* stats){
   // For now we only handle 1 cpu. This needs to be fixed in the future.
   uint64_t numCPUs = 1;
-  stats->numCPUs = numCPUs;
-  cpu_info* cpuInfo = (cpu_info*)malloc(sizeof(cpu_info) * numCPUs);
-  if (read_cpuinfo(cpuInfo) != 0) {
+  cpu_info* cpuInfo = NULL;
+  if ((cpuInfo = read_cpuinfo(&numCPUs)) == 0) {
     printf("Error reading cpu information.\n");
     return -1;
   }
   /* TODO, copy cpuInfo to the stats variable. */
-  
+  stats->numCPUs = numCPUs;
+  stats->cpuStructs = (void*)cpuInfo;
   return 0;
 }
 
@@ -109,7 +109,7 @@ int copy_logdrive_stats(perf_stats* stats){
 int copy_networkadapter_stats(perf_stats* stats){
   ns* nsStats = NULL;
   uint64_t numAdapters = 0;
-  if (read_networkinfo(nsStats, &numAdapters) != 0){
+  if ((nsStats = read_networkinfo(&numAdapters)) == NULL){
     printf("Error reading network stats.\n");
     return -1;
   }
@@ -122,7 +122,7 @@ int copy_networkadapter_stats(perf_stats* stats){
 int copy_process_stats(perf_stats* stats){
   struct procStats p;
   struct procStatNode *tmp, *tmpp;
-  int i;
+  uint64_t i;
 
   read_procstats(&p);
   printf ("Read proc stats\n");
@@ -165,7 +165,17 @@ int print_mem_stats(perf_stats* stats){
 }
 
 int print_cpu_stats(perf_stats* stats){
-  /* TODO */
+  printf("Number of CPUs: %llu\n", stats->numCPUs);
+  cpu_info* cinfo = (cpu_info*)stats->cpuStructs;
+  
+  for (uint64_t i = 0; i < stats->numCPUs; i++)
+    {
+      printf("CPU : %llu\n", cinfo[i].cpuNum);
+      printf("User : %llu\n", cinfo[i].user);
+      printf("System : %llu\n", cinfo[i].system);
+      printf("Idle : %llu\n\n", cinfo[i].idle);
+    }
+
   return 0;
 }
 
@@ -181,7 +191,7 @@ int print_networkadapter_stats(perf_stats* stats){
 
 int print_process_stats(perf_stats* stats){
   struct procStatNode *tmp;
-  int i;
+  uint i;
   printf ("---Process State Stats---\n");
   printf ("Total         : %d\n", (int) stats->numProcs);
   tmp = (struct procStatNode *) stats->procStructs;

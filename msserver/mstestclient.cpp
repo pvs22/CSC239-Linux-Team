@@ -62,26 +62,28 @@ int main (int argc, char *argv[])
 }
 
 int printmemstats (char* buffer){
-  mem_info meminfo;
+  /*mem_info meminfo;
   if (read_meminfo(&meminfo) != 0){
     printf("Could not read memory information\n");
     return 0;
   }
   int ret = sprintf (buffer, "--- Memory Stats ---\nFree Memory = %d KB\nUsed Memory = %d KB\nTotal Memory = %d KB\nMemory Utilization = %5.2f%%\nNumber of pages paged in = %d\nNumber of pages paged out = %d\nNumber of pages swaped in = %d\nNumber of pages swaped out = %d\n", 
 	   meminfo.free, meminfo.used, meminfo.total, meminfo.util, meminfo.pgin, meminfo.pgout, meminfo.swpin, meminfo.swpout);
-  return ret;
+	   return ret;*/
+  return 0;
   
 }
 
 
 int printcpustats(char* buffer){
-  cpu_info c;
-  if (read_cpuinfo(&c) != 0){
+  uint64_t numCPUs = 0;
+  cpu_info* c;
+  if ((c = read_cpuinfo(&numCPUs)) == NULL){
     printf("Could not read cpu information\n");
     return 0;
   }
   
-  return sprintf (buffer, "--- CPU Stats ---\nUser = %ld \nSystem = %ld \nIdle = %ld\nTotal = %d\n", 
-	   c.user, c.system, c.idle, c.user + c.system +c.idle);
-  
+  return sprintf (buffer, "--- CPU Stats ---\nUser = %llu \nSystem = %llu \nIdle = %llu\nTotal = %llu\n", 
+	   c[0].user, c[0].system, c[0].idle, c[0].user + c[0].system +c [0].idle);
+	   
 }

@@ -71,29 +71,49 @@ int read_meminfo(mem_info* meminfo)
 
 
 
-int read_cpuinfo(cpu_info* cinfo)
-{
-  char str[4];
-  char newstr[4];
+cpu_info* read_cpuinfo(uint64_t* numCpus){
+  char str[6];
+  char newstr[6];
+  int MAX_NUM_CPUS = 128;
   FILE *fp;
   long int user,sys, nice, idle, val3, val4, val5, val6;
-  if(fp = fopen("/proc/stat", "r")){
-    if(fscanf(fp, "%s %ld %ld %ld %ld %ld %ld %ld %ld", str, &user, &nice, &sys, &idle, &val3, &val4, &val5, &val6)==0){
+  long int cpuNum;
+  cpu_info* cinfo = (cpu_info*)malloc(sizeof(cpu_info) * MAX_NUM_CPUS);
+  long int i = 0;
+  int buffer_size = 1024;
+  char buffer[buffer_size];
+  
+  if (fp = fopen("/proc/stat", "r")){
+    fgets(buffer, buffer_size, fp);
+    if(fscanf(fp, "cpu%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld\n", &cpuNum, &user, &nice, &sys, &idle, &val3, &val4, &val5, &val6, &val6)==0){
       fclose(fp);
       fprintf(stderr, "Error : Can not read from /proc/stat\n");
+      return NULL; 
     }else{
-      if(strcmp(str, "cpu")==0){
-	cinfo->user = user + nice;
-	cinfo->system = sys;
-	cinfo->idle = idle;
+      while(1){
+	cinfo[i].cpuNum = cpuNum;
+	cinfo[i].user = user + nice;
+	cinfo[i].system = sys;
+	cinfo[i].idle = idle;
+
+	printf("CPU : %llu\n", cinfo[i].cpuNum);
+	printf("User : %llu\n", cinfo[i].user);
+	printf("System : %llu\n", cinfo[i].system);
+	printf("Idle : %llu\n\n", cinfo[i].idle);
+	i++;
+	if (fscanf(fp, "cpu%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld\n", &cpuNum, &user, &nice, 
+		   &sys, &idle, &val3, &val4, &val5, &val6, &val6) == 0) {
+	  break;
+	}
       }
       fclose(fp);
     }
   }else{
     fprintf(stderr, "Error : Can not open /proc/stat");
-    return -1;
+    return NULL;
   }
-  return 0;
+  *numCpus = i;
+  return cinfo;
 }
 
 
@@ -122,7 +142,7 @@ void read_diskioinfo(){
 
 };
 
-int read_networkinfo(ns* nsStats, uint64_t* numAdapters)
+ns* read_networkinfo(uint64_t* numAdapters)
 {
 	FILE* f;
 	int a,j;
@@ -136,8 +156,6 @@ int read_networkinfo(ns* nsStats, uint64_t* numAdapters)
 	uint64_t fscanf_value;
 	uint64_t MAX_NUM_ADAPTERS = 128;
 	ns* b = (ns*)malloc(sizeof(ns) * MAX_NUM_ADAPTERS);
-	nsStats = b;
-
         if (f = fopen("/proc/net/dev", "r")) {
 	  fgets(buffer, buffer_size, f);
 	  fgets(buffer, buffer_size, f);
@@ -153,7 +171,7 @@ int read_networkinfo(ns* nsStats, uint64_t* numAdapters)
 	      if (fscanf_value== 0){
 		fclose(f);
 		fprintf(stderr, "Error : Can not read network data from /proc/net/dev.\n");
-		return -1;
+		return NULL;
 	      } else {
 		total_bytesrec = total_bytesrec + b[i].bytesRec;
 		total_bytesent = total_bytesent + b[i].bytesSent;
@@ -172,9 +190,9 @@ int read_networkinfo(ns* nsStats, uint64_t* numAdapters)
 	  *numAdapters = i + 1; 
 	} else {
 	  fprintf(stderr, "Error : Can not open /proc/meminfo.\n");
-	  return -1;
+	  return NULL;
 	}	
-	return 0;
+	return b;
 };
  
 int read_procstats (struct procStats *p)
@@ -225,7 +243,9 @@ void getProcStats (struct procStats *procPtr, int iter)
                                 sprintf (fname, "/proc/%s/stat", ent->d_name);
                                 if (f = fopen(fname, "r"))
                                 {
-                                        fscanf (f, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %llu", &(nodePtr->pid), &(nodePtr->cmd), &(nodePtr->state), &ppid, &pgrp, &session, &tty_nr, &tpgid, &flags, &minflt, &majflt, &cmajflt, &utime, &stime, &cutime, &cstime, &priority, &nice, &num_thr, &itrealv, &startTime);
+				  int nodePtrPid = 0;
+				  fscanf (f, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld", &nodePtrPid, (char*)&(nodePtr->cmd), &(nodePtr->state), &ppid, &pgrp, &session, &tty_nr, &tpgid, &flags, &minflt, &majflt, &cmajflt, &utime, &stime, &cutime, &cstime, &priority, &nice, &num_thr, &itrealv, &startTime);
+					nodePtr->pid = (uint64_t)nodePtrPid;
                                         fclose(f);
  
                                         // Calculate CPU utilization here
@@ -240,15 +260,21 @@ void getProcStats (struct procStats *procPtr, int iter)
                                 sprintf (fname, "/proc/%s/statm", ent->d_name);
                                 if (f = fopen(fname, "r"))
                                 {
-                                        fscanf (f, "%d %d %d", &(nodePtr->sizeTotal), &(nodePtr->sizeRes), &(nodePtr->pages));
-                                        fclose(f);
-                                        // To avoid divide by 0
-                                        if (nodePtr->sizeTotal > 0)
-                                                nodePtr->memUtil = (nodePtr->sizeRes/(1.0*nodePtr->sizeTotal))*100;
-                                        else
-                                                nodePtr->memUtil = 0.0;
+				  int nodePtrSizeTotal = 0;
+				  int nodePtrSizeRes = 0;
+				  int nodePtrPages = 0;
+				  fscanf (f, "%d %d %d", &nodePtrSizeTotal, &nodePtrSizeRes, &nodePtrPages);
+				  nodePtr->sizeTotal = (uint64_t)nodePtrSizeTotal;
+				  nodePtr->sizeRes = (uint64_t)nodePtrSizeRes;
+				  nodePtr->pages = (uint64_t)nodePtrPages;
+				  fclose(f);
+				  // To avoid divide by 0
+				  if (nodePtr->sizeTotal > 0)
+				    nodePtr->memUtil = (nodePtr->sizeRes/(1.0*nodePtr->sizeTotal))*100;
+				  else
+				    nodePtr->memUtil = 0.0;
                                 } else
-                                        printf ("Error! %s file not found\n", fname);
+				  printf ("Error! %s file not found\n", fname);
  
                                 // Process counters
                                 procPtr->procTotal ++;

@@ -12,14 +12,31 @@ int main()
     return -1;
   }
   printf ("--- Memory Stats ---\n");
-  printf ("Free Memory = %d KB\n", meminfo.free);
-  printf ("Used Memory = %d KB\n", meminfo.used);
-  printf ("Total Memory = %d KB\n", meminfo.total);
+  printf ("Free Memory = %llu KB\n", meminfo.free);
+  printf ("Used Memory = %llu KB\n", meminfo.used);
+  printf ("Total Memory = %llu KB\n", meminfo.total);
   printf ("Memory Utilization = %5.2f%%\n", meminfo.util);
   printf("----- VM stats ------\n");
-  printf("Number of pages paged in = %d\n", meminfo.pgin);
-  printf("Number of pages paged out = %d\n", meminfo.pgout);
-  printf("Number of pages swaped in = %d\n", meminfo.swpin);
-  printf("Number of pages swaped out = %d\n", meminfo.swpout);					
-  read_procstats();
+  printf("Number of pages paged in = %llu\n", meminfo.pgin);
+  printf("Number of pages paged out = %llu\n", meminfo.pgout);
+  printf("Number of pages swaped in = %llu\n", meminfo.swpin);
+  printf("Number of pages swaped out = %llu\n", meminfo.swpout);					
+  struct procStats stats;
+  read_procstats(&stats);
+  cpu_info* cpus = NULL;
+  uint64_t numCPUs = 0;
+  cpus = read_cpuinfo(&numCPUs);
+  if (cpus == NULL){
+    printf("Error reading cpu_info\n");
+    exit(-1);
+  }
+  uint64_t i = 0;
+  for (i = 0; i < numCPUs; i++){
+
+    printf("CPU Num : %llu\n", cpus[i].cpuNum);
+    printf("User : %llu\n", cpus[i].user);
+    printf("System : %llu\n", cpus[i].system);
+    printf("Idle : %llu\n\n", cpus[i].idle);
+  }
+  return 0; 
 }

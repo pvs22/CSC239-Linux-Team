@@ -58,16 +58,17 @@ struct procStatNode {
 
 typedef struct
 {
-  long int system;
-  long int user;
-  long int idle;
-  long int numInterrupts;
+  uint64_t cpuNum;
+  uint64_t system;
+  uint64_t user;
+  uint64_t idle;
+  uint64_t numInterrupts;
 } cpu_info;
 
 int read_meminfo(mem_info*);
-int read_cpuinfo(cpu_info*);
+cpu_info* read_cpuinfo(uint64_t*);
 void read_diskioinfo();
-int read_networkinfo(ns*, uint64_t*);
+ns* read_networkinfo(uint64_t*);
 int read_procstats(struct procStats*);
 int is_process (char *str); // checks if the dir name "*str" correspond to a process
 void getProcStats (struct procStats *procPtr, int iter); // gets process stats from /proc dir
