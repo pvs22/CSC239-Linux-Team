@@ -1,2 +1,3 @@
 The msserver directory contains the managing server and the
 readperfstats directory contains the code for reading the performance statistics.
+testing
